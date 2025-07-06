@@ -475,8 +475,14 @@ public class OHTableAdminInterfaceTest {
             e.printStackTrace();
             throw e;
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("test_en_dis_tb"))) {
+                admin.disableTable(TableName.valueOf("test_en_dis_tb"));
+            }
             admin.deleteTable(TableName.valueOf("test_en_dis_tb"));
             assertFalse(admin.tableExists(TableName.valueOf("test_en_dis_tb")));
+            if (admin.isTableEnabled(TableName.valueOf("en_dis", "test"))) {
+                admin.disableTable(TableName.valueOf("en_dis", "test"));
+            }
             admin.deleteTable(TableName.valueOf("en_dis", "test"));
             assertFalse(admin.tableExists(TableName.valueOf("en_dis", "test")));
         }
@@ -683,8 +689,13 @@ public class OHTableAdminInterfaceTest {
             start = System.currentTimeMillis();
             regionLoadMap = admin.getRegionLoad(ServerName.valueOf("localhost,1,1"), TableName.valueOf(non_part_tablegroup));
             cost = System.currentTimeMillis() - start;
+<<<<<<< HEAD
             System.out.println("get region load time usage: " + cost + "ms, tablegroup: " + non_part_tablegroup);
             assertEquals(3, regionLoadMap.size());
+=======
+            System.out.println("get region metrics time usage: " + cost + "ms, tablegroup: " + non_part_tablegroup);
+            assertEquals(1, metrics.size());
+>>>>>>> 32534b6 (add test case for disable-before-delete-table; fix cases)
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
@@ -726,11 +737,20 @@ public class OHTableAdminInterfaceTest {
             assertTrue(admin.tableExists(TableName.valueOf("test_del_tb")));
             IOException thrown = assertThrows(IOException.class,
                     () -> {
+                        if (admin.isTableEnabled(TableName.valueOf("tablegroup_not_exists"))) {
+                            admin.disableTable(TableName.valueOf("tablegroup_not_exists"));
+                        }
                         admin.deleteTable(TableName.valueOf("tablegroup_not_exists"));
                     });
             Assert.assertTrue(thrown.getCause() instanceof ObTableException);
             Assert.assertEquals(ResultCodes.OB_KV_HBASE_TABLE_NOT_EXISTS.errorCode, ((ObTableException) thrown.getCause()).getErrorCode());
+            if (admin.isTableEnabled(TableName.valueOf("del_tb", "test"))) {
+                admin.disableTable(TableName.valueOf("del_tb", "test"));
+            }
             admin.deleteTable(TableName.valueOf("del_tb", "test"));
+            if (admin.isTableEnabled(TableName.valueOf("test_del_tb"))) {
+                admin.disableTable(TableName.valueOf("test_del_tb"));
+            }
             admin.deleteTable(TableName.valueOf("test_del_tb"));
             assertFalse(admin.tableExists(TableName.valueOf("del_tb", "test")));
             assertFalse(admin.tableExists(TableName.valueOf("test_del_tb")));
@@ -1507,6 +1527,9 @@ public class OHTableAdminInterfaceTest {
             if (admin.tableExists(TableName.valueOf(tableName))) {
                 setErrSimPoint(ErrSimPoint.EN_DELETE_HTABLE_CF_FINISH_ERR, false);
                 setErrSimPoint(ErrSimPoint.EN_DELETE_HTABLE_SKIP_CF_ERR, false);
+                if (admin.isTableEnabled(TableName.valueOf(tableName))) {
+                    admin.disableTable(TableName.valueOf(tableName));
+                }
                 admin.deleteTable(TableName.valueOf(tableName));
             }
         }
@@ -1570,6 +1593,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableExistsException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1589,6 +1615,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableNotDisabledException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1620,6 +1649,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableExistsException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1639,6 +1671,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableNotDisabledException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1651,6 +1686,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableNotEnabledException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1671,8 +1709,8 @@ public class OHTableAdminInterfaceTest {
         Connection connection = ConnectionFactory.createConnection(conf);
         Admin admin = connection.getAdmin();
         java.sql.Connection conn = ObHTableTestUtil.getConnection();
-        java.sql.Connection sysConn = ObHTableTestUtil.getSysConnection();
-        String tenantName = "mysql";
+        java.sql.Connection sysConn = ObHTableTestUtil.getSysTenantConnection();
+        String tenantName = FULL_USER_NAME.split("@")[1].split("#")[0];
 
         byte[] tableName = Bytes.toBytes("test_create_drop_tg_helper");
         byte[] cf1 = Bytes.toBytes("cf1");
@@ -1693,6 +1731,9 @@ public class OHTableAdminInterfaceTest {
 
             // 1. open err EN_DELETE_HTABLE_SKIP_CF_ERR, will skip delete cf table when delete hbase table
             // and the subsequent delete htable operations will return OB_TABLEGROUP_NOT_EMPTY
+            if (admin.isTableEnabled(TableName.valueOf(tableName))) {
+                admin.disableTable(TableName.valueOf(tableName));
+            }
             setErrSimPoint(ErrSimPoint.EN_DELETE_HTABLE_SKIP_CF_ERR, true);
             ObHTableTestUtil.executeIgnoreExpectedErrors(() -> admin.deleteTable(TableName.valueOf(tableName)), "OB_TABLEGROUP_NOT_EMPTY");
             assertTrue("Table should still exist after delete error injection",
@@ -1718,6 +1759,9 @@ public class OHTableAdminInterfaceTest {
             executeSQL(conn, "drop database if exists db_test_create_drop_tg_helper", true);
             executeSQL(sysConn, String.format("alter tenant %s set default tablegroup = null", tenantName), true);
             if (admin.tableExists(TableName.valueOf(tableName))) {
+                if (admin.isTableEnabled(TableName.valueOf(tableName))) {
+                    admin.disableTable(TableName.valueOf(tableName));
+                }
                 setErrSimPoint(ErrSimPoint.EN_DELETE_HTABLE_SKIP_CF_ERR, false);
                 admin.deleteTable(TableName.valueOf(tableName));
             }
@@ -1814,5 +1858,28 @@ public class OHTableAdminInterfaceTest {
                 admin.deleteTable(TableName.valueOf(tableName));
             }
         }
+    }
+    
+    @Test
+    public void testDropEnabledTableFail() throws Exception {
+        Configuration conf = ObHTableTestUtil.newConfiguration();
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Admin admin = connection.getAdmin();
+        
+        byte[] tableName = Bytes.toBytes("test_drop_enabled_table_fail");
+        byte[] cf1 = Bytes.toBytes("cf1");
+        HColumnDescriptor hcd1 = new HColumnDescriptor(cf1);
+        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+        htd.addFamily(hcd1);
+        try {
+            admin.createTable(htd);
+            admin.deleteTable(TableName.valueOf(tableName));
+            fail();
+        } catch (Exception e) {
+            assertTrue(true);
+        }
+        admin.disableTable(TableName.valueOf(tableName));
+        admin.deleteTable(TableName.valueOf(tableName));
+        Assert.assertFalse(admin.tableExists(TableName.valueOf(tableName)));
     }
 }
