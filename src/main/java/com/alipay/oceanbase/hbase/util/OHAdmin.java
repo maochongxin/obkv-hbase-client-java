@@ -36,10 +36,62 @@ import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.alipay.oceanbase.rpc.protocol.payload.ResultCodes.*;
+
 public class OHAdmin implements Admin {
+<<<<<<< HEAD
     private boolean                 aborted = false;
     private final OHConnectionImpl  connection;
     private final Configuration     conf;
+=======
+    private boolean                aborted = false;
+    private final OHConnectionImpl connection;
+    private final Configuration    conf;
+
+    @FunctionalInterface
+    private interface ExceptionHandler {
+        void handle(int errorCode, TableName tableName) throws IOException;
+    }
+
+    private Throwable getRootCause(Throwable e) {
+        Throwable cause = e.getCause();
+        while(cause != null && cause.getCause() != null) {
+            cause = cause.getCause();
+        }
+        return cause;
+    }
+
+    private void handleTimeoutException(Exception e) throws TimeoutIOException {
+        if (e.getCause() instanceof ObTableTransportException
+                && ((ObTableTransportException) e.getCause()).getErrorCode() == TransportCodes.BOLT_TIMEOUT) {
+            throw new TimeoutIOException(e.getCause());
+        }
+    }
+
+    private void handleObTableException(Exception e, TableName tableName, ExceptionHandler exceptionHandler) throws IOException {
+        if (e instanceof IOException) {
+            handleTimeoutException(e);
+        }
+
+        Throwable cause = getRootCause(e);
+
+        if (cause instanceof ObTableException) {
+            int errCode = ((ObTableException) cause).getErrorCode();
+            try {
+                exceptionHandler.handle(errCode, tableName);
+            } catch (RuntimeException re) {
+                throw re;
+            }
+        }
+
+        if (e instanceof IOException) {
+            throw (IOException) e;
+        } else {
+            throw new IOException(e);
+        }
+    }
+
+>>>>>>> 32534b6 (add test case for disable-before-delete-table; fix cases)
     OHAdmin(OHConnectionImpl connection) {
         this.connection = connection;
         this.conf = connection.getConfiguration();
@@ -76,10 +128,7 @@ public class OHAdmin implements Admin {
             return executor.tableExists(tableName.getNameAsString());
         } catch (Exception e) {
             // try to get the original cause
-            Throwable cause = e.getCause();
-            while(cause != null && cause.getCause() != null) {
-                cause = cause.getCause();
-            }
+            Throwable cause = getRootCause(e);
             if (cause instanceof ObTableException) {
                 int errCode = ((ObTableException) cause).getErrorCode();
                 // if the original cause is database_not_exist, means namespace in tableName does not exist
@@ -88,7 +137,11 @@ public class OHAdmin implements Admin {
                     return false;
                 }
             }
-            throw e;
+            if (e instanceof IOException) {
+                throw (IOException) e;
+            } else {
+                throw new IOException(e);
+            }
         }
     }
 
@@ -150,6 +203,7 @@ public class OHAdmin implements Admin {
         try {
             return executor.getTableDescriptor();
         } catch (IOException e) {
+<<<<<<< HEAD
             if (e.getCause() instanceof ObTableTransportException
                     && ((ObTableTransportException) e.getCause()).getErrorCode() == TransportCodes.BOLT_TIMEOUT) {
                 throw new TimeoutIOException(e.getCause());
@@ -163,12 +217,47 @@ public class OHAdmin implements Admin {
 
     @Override
     public void createTable(HTableDescriptor tableDescriptor) throws IOException {
+=======
+            handleObTableException(e, tableName, (errCode, argTableName) -> {
+                if (errCode == OB_KV_HBASE_TABLE_NOT_EXISTS.errorCode) {
+                    throw new TableNotFoundException(argTableName);
+                } else if (errCode == OB_KV_HBASE_NAMESPACE_NOT_FOUND.errorCode) {
+                    throw new NamespaceNotFoundException(argTableName.getNamespaceAsString());
+                }
+            });
+            throw e; // should never reach
+        }
+    }
+
+    @Override
+    public TableDescriptor getDescriptor(TableName tableName) throws IOException {
+        OHConnectionConfiguration connectionConf = new OHConnectionConfiguration(conf);
+        ObTableClient tableClient = ObTableClientManager.getOrCreateObTableClientByTableName(tableName, connectionConf);
+        OHTableDescriptorExecutor executor = new OHTableDescriptorExecutor(tableName.getNameAsString(), tableClient);
+        try {
+            return executor.getTableDescriptor();
+        } catch (IOException e) {
+            handleObTableException(e, tableName, (errCode, argTableName) -> {
+                if (errCode == OB_KV_HBASE_TABLE_NOT_EXISTS.errorCode) {
+                    throw new TableNotFoundException(argTableName);
+                } else if (errCode == OB_KV_HBASE_NAMESPACE_NOT_FOUND.errorCode) {
+                    throw new NamespaceNotFoundException(argTableName.getNamespaceAsString());
+                }
+            });
+            throw e; // should never reach
+        }
+    }
+
+    @Override
+    public void createTable(TableDescriptor tableDescriptor) throws IOException {
+>>>>>>> 32534b6 (add test case for disable-before-delete-table; fix cases)
         OHConnectionConfiguration connectionConf = new OHConnectionConfiguration(conf);
         ObTableClient tableClient = ObTableClientManager.getOrCreateObTableClientByTableName(tableDescriptor.getTableName(), connectionConf);
         OHCreateTableExecutor executor = new OHCreateTableExecutor(tableClient);
         try {
             executor.createTable(tableDescriptor, null);
         } catch (IOException e) {
+<<<<<<< HEAD
             if (e.getCause() instanceof ObTableTransportException
                     && ((ObTableTransportException) e.getCause()).getErrorCode() == TransportCodes.BOLT_TIMEOUT) {
                 throw new TimeoutIOException(e.getCause());
@@ -177,6 +266,15 @@ public class OHAdmin implements Admin {
             } else {
                 throw e;
             }
+=======
+            handleObTableException(e, tableDescriptor.getTableName(), (errCode, tableName) -> {
+                if (errCode == OB_KV_HBASE_TABLE_EXISTS.errorCode) {
+                    throw new TableExistsException(tableName.getNameAsString());
+                } else if (errCode == OB_KV_HBASE_NAMESPACE_NOT_FOUND.errorCode) {
+                    throw new NamespaceNotFoundException(tableName.getNameAsString());
+                }
+            });
+>>>>>>> 32534b6 (add test case for disable-before-delete-table; fix cases)
         }
     }
 
@@ -203,12 +301,24 @@ public class OHAdmin implements Admin {
         try {
             executor.deleteTable(tableName.getNameAsString());
         } catch (IOException e) {
+<<<<<<< HEAD
             if (e.getCause() instanceof ObTableTransportException
                 && ((ObTableTransportException) e.getCause()).getErrorCode() == TransportCodes.BOLT_TIMEOUT) {
                 throw new TimeoutIOException(e.getCause());
             } else if (e.getCause().getMessage().contains("not found")) {
                 throw new TableNotFoundException(tableName);
             }
+=======
+            handleObTableException(e, tableName, (errCode, argTableName) -> {
+                if (errCode == OB_KV_HBASE_TABLE_NOT_EXISTS.errorCode) {
+                    throw new TableNotFoundException(argTableName);
+                } else if (errCode == OB_KV_HBASE_NAMESPACE_NOT_FOUND.errorCode) {
+                    throw new NamespaceNotFoundException(argTableName.getNamespaceAsString());
+                } else if (errCode == OB_KV_TABLE_NOT_DISABLED.errorCode) {
+                    throw new TableNotDisabledException(argTableName);
+                }
+            });
+>>>>>>> 32534b6 (add test case for disable-before-delete-table; fix cases)
         }
     }
 
@@ -235,6 +345,7 @@ public class OHAdmin implements Admin {
         try {
             executor.enableTable(tableName.getNameAsString());
         } catch (IOException e) {
+<<<<<<< HEAD
             if (e.getCause() instanceof ObTableTransportException
                     && ((ObTableTransportException) e.getCause()).getErrorCode() == TransportCodes.BOLT_TIMEOUT) {
                 throw new TimeoutIOException(e.getCause());
@@ -245,6 +356,15 @@ public class OHAdmin implements Admin {
             } else {
                 throw e;
             }
+=======
+            handleObTableException(e, tableName, (errCode, argTableName) -> {
+                if (errCode == OB_KV_HBASE_TABLE_NOT_EXISTS.errorCode) {
+                    throw new TableNotFoundException(argTableName);
+                } else if (errCode == OB_KV_HBASE_NAMESPACE_NOT_FOUND.errorCode) {
+                    throw new NamespaceNotFoundException(argTableName.getNamespaceAsString());
+                }
+            });
+>>>>>>> 32534b6 (add test case for disable-before-delete-table; fix cases)
         }
     }
 
@@ -276,6 +396,7 @@ public class OHAdmin implements Admin {
         try {
             executor.disableTable(tableName.getNameAsString());
         } catch (IOException e) {
+<<<<<<< HEAD
             if (e.getCause() instanceof ObTableTransportException
                     && ((ObTableTransportException) e.getCause()).getErrorCode() == TransportCodes.BOLT_TIMEOUT) {
                 throw new TimeoutIOException(e.getCause());
@@ -286,6 +407,15 @@ public class OHAdmin implements Admin {
             } else {
                 throw e;
             }
+=======
+            handleObTableException(e, tableName, (errCode, argTableName) -> {
+                if (errCode == OB_KV_HBASE_TABLE_NOT_EXISTS.errorCode) {
+                    throw new TableNotFoundException(argTableName);
+                } else if (errCode == OB_KV_HBASE_NAMESPACE_NOT_FOUND.errorCode) {
+                    throw new NamespaceNotFoundException(argTableName.getNamespaceAsString());
+                }
+            });
+>>>>>>> 32534b6 (add test case for disable-before-delete-table; fix cases)
         }
     }
 
@@ -552,6 +682,36 @@ public class OHAdmin implements Admin {
     }
 
     @Override
+<<<<<<< HEAD
+=======
+    public List<RegionMetrics> getRegionMetrics(ServerName serverName) throws IOException {
+        throw new FeatureNotSupportedException("does not support yet");
+    }
+
+    @Override
+    public List<RegionMetrics> getRegionMetrics(ServerName serverName, TableName tableName) throws IOException {
+        if (tableName == null) {
+            throw new FeatureNotSupportedException("does not support tableName is null");
+        }
+        OHConnectionConfiguration connectionConf = new OHConnectionConfiguration(conf);
+        ObTableClient tableClient = ObTableClientManager.getOrCreateObTableClientByTableName(tableName, connectionConf);
+        OHRegionMetricsExecutor executor = new OHRegionMetricsExecutor(tableClient);
+        try {
+            return executor.getRegionMetrics(tableName.getNameAsString());
+        } catch (Exception e) {
+            handleObTableException(e, tableName, (errCode, argTableName) -> {
+                if (errCode == OB_KV_HBASE_TABLE_NOT_EXISTS.errorCode) {
+                    throw new TableNotFoundException(argTableName.getNameAsString());
+                } else if (errCode == OB_KV_HBASE_NAMESPACE_NOT_FOUND.errorCode) {
+                    throw new NamespaceNotFoundException(argTableName.getNamespaceAsString());
+                }
+            });
+            throw e; // should never reach
+        }
+    }
+
+    @Override
+>>>>>>> 32534b6 (add test case for disable-before-delete-table; fix cases)
     public Configuration getConfiguration() {
         return connection.getConfiguration();
     }
