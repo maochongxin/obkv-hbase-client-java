@@ -477,8 +477,14 @@ public class OHTableAdminInterfaceTest {
             e.printStackTrace();
             throw e;
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("test_en_dis_tb"))) {
+                admin.disableTable(TableName.valueOf("test_en_dis_tb"));
+            }
             admin.deleteTable(TableName.valueOf("test_en_dis_tb"));
             assertFalse(admin.tableExists(TableName.valueOf("test_en_dis_tb")));
+            if (admin.isTableEnabled(TableName.valueOf("en_dis", "test"))) {
+                admin.disableTable(TableName.valueOf("en_dis", "test"));
+            }
             admin.deleteTable(TableName.valueOf("en_dis", "test"));
             assertFalse(admin.tableExists(TableName.valueOf("en_dis", "test")));
         }
@@ -501,7 +507,206 @@ public class OHTableAdminInterfaceTest {
         Object[] results = new Object[batchLsit.size()];
         table.batch(batchLsit, results);
     }
+<<<<<<< HEAD
     
+=======
+
+    @Test
+    public void testAdminGetRegionMetrics() throws Exception {
+        java.sql.Connection conn = ObHTableTestUtil.getConnection();
+        Statement st = conn.createStatement();
+        try {
+            st.execute("CREATE TABLEGROUP IF NOT EXISTS test_get_region_metrics SHARDING = 'ADAPTIVE';\n" +
+                    "\n" +
+                    "CREATE TABLE IF NOT EXISTS `test_get_region_metrics$cf1` (\n" +
+                    "    `K` varbinary(1024) NOT NULL,\n" +
+                    "    `Q` varbinary(256) NOT NULL,\n" +
+                    "    `T` bigint(20) NOT NULL,\n" +
+                    "    `V` varbinary(1024) DEFAULT NULL,\n" +
+                    "    PRIMARY KEY (`K`, `Q`, `T`)\n" +
+                    ") TABLEGROUP = test_get_region_metrics PARTITION BY KEY(`K`) PARTITIONS 10;\n" +
+                    "\n" +
+                    "CREATE TABLE IF NOT EXISTS `test_get_region_metrics$cf2` (\n" +
+                    "    `K` varbinary(1024) NOT NULL,\n" +
+                    "    `Q` varbinary(256) NOT NULL,\n" +
+                    "    `T` bigint(20) NOT NULL,\n" +
+                    "    `V` varbinary(1024) DEFAULT NULL,\n" +
+                    "    PRIMARY KEY (`K`, `Q`, `T`)\n" +
+                    ") TABLEGROUP = test_get_region_metrics PARTITION BY KEY(`K`) PARTITIONS 10;\n" +
+                    "\n" +
+                    "CREATE TABLE IF NOT EXISTS `test_get_region_metrics$cf3` (\n" +
+                    "    `K` varbinary(1024) NOT NULL,\n" +
+                    "    `Q` varbinary(256) NOT NULL,\n" +
+                    "    `T` bigint(20) NOT NULL,\n" +
+                    "    `V` varbinary(1024) DEFAULT NULL,\n" +
+                    "    PRIMARY KEY (`K`, `Q`, `T`)\n" +
+                    ") TABLEGROUP = test_get_region_metrics PARTITION BY KEY(`K`) PARTITIONS 10;\n" +
+                    "\n" +
+                    "CREATE TABLEGROUP IF NOT EXISTS test_no_part SHARDING = 'ADAPTIVE';\n" +
+                    "CREATE TABLE IF NOT EXISTS `test_no_part$cf1` (\n" +
+                    "    `K` varbinary(1024) NOT NULL,\n" +
+                    "    `Q` varbinary(256) NOT NULL,\n" +
+                    "    `T` bigint(20) NOT NULL,\n" +
+                    "    `V` varbinary(1024) DEFAULT NULL,\n" +
+                    "    PRIMARY KEY (`K`, `Q`, `T`)\n" +
+                    ") TABLEGROUP = test_no_part;\n" +
+                    "CREATE TABLE IF NOT EXISTS `test_no_part$cf2` (\n" +
+                    "    `K` varbinary(1024) NOT NULL,\n" +
+                    "    `Q` varbinary(256) NOT NULL,\n" +
+                    "    `T` bigint(20) NOT NULL,\n" +
+                    "    `V` varbinary(1024) DEFAULT NULL,\n" +
+                    "    PRIMARY KEY (`K`, `Q`, `T`)\n" +
+                    ") TABLEGROUP = test_no_part;\n" +
+                    "CREATE TABLE IF NOT EXISTS `test_no_part$cf3` (\n" +
+                    "    `K` varbinary(1024) NOT NULL,\n" +
+                    "    `Q` varbinary(256) NOT NULL,\n" +
+                    "    `T` bigint(20) NOT NULL,\n" +
+                    "    `V` varbinary(1024) DEFAULT NULL,\n" +
+                    "    PRIMARY KEY (`K`, `Q`, `T`)\n" +
+                    ") TABLEGROUP = test_no_part;\n" +
+                    "CREATE DATABASE IF NOT EXISTS `get_region`;\n" +
+                    "use `get_region`;\n" +
+                    "CREATE TABLEGROUP IF NOT EXISTS `get_region:test_multi_cf` SHARDING = 'ADAPTIVE';\n" +
+                    "CREATE TABLE IF NOT EXISTS `get_region:test_multi_cf$cf1` (\n" +
+                    "    `K` varbinary(1024) NOT NULL,\n" +
+                    "    `Q` varbinary(256) NOT NULL,\n" +
+                    "    `T` bigint(20) NOT NULL,\n" +
+                    "    `V` varbinary(1024) DEFAULT NULL,\n" +
+                    "   PRIMARY KEY (`K`, `Q`, `T`)\n" +
+                    ") TABLEGROUP = `get_region:test_multi_cf` PARTITION BY KEY(`K`) PARTITIONS 3;\n" +
+                    "CREATE TABLE IF NOT EXISTS `get_region:test_multi_cf$cf2` (\n" +
+                    "    `K` varbinary(1024) NOT NULL,\n" +
+                    "    `Q` varbinary(256) NOT NULL,\n" +
+                    "    `T` bigint(20) NOT NULL,\n" +
+                    "    `V` varbinary(1024) DEFAULT NULL,\n" +
+                    "    PRIMARY KEY (`K`, `Q`, `T`)\n" +
+                    ") TABLEGROUP = `get_region:test_multi_cf` PARTITION BY KEY(`K`) PARTITIONS 3;\n" +
+                    "CREATE TABLE IF NOT EXISTS `get_region:test_multi_cf$cf3` (\n" +
+                    "    `K` varbinary(1024) NOT NULL,\n" +
+                    "    `Q` varbinary(256) NOT NULL,\n" +
+                    "    `T` bigint(20) NOT NULL,\n" +
+                    "    `V` varbinary(1024) DEFAULT NULL,\n" +
+                    "    PRIMARY KEY (`K`, `Q`, `T`)\n" +
+                    ") TABLEGROUP = `get_region:test_multi_cf` PARTITION BY KEY(`K`) PARTITIONS 3;");
+            st.close();
+            String tablegroup1 = "test_get_region_metrics";
+            String tablegroup2 = "get_region:test_multi_cf";
+            Configuration conf = ObHTableTestUtil.newConfiguration();
+            Connection connection = ConnectionFactory.createConnection(conf);
+            Admin admin = connection.getAdmin();
+            // test tablegroup not existed
+            IOException thrown = assertThrows(IOException.class,
+                    () -> {
+                        admin.getRegionMetrics(null, TableName.valueOf("tablegroup_not_exists"));
+                    });
+            Assert.assertTrue(thrown.getCause() instanceof ObTableException);
+            Assert.assertEquals(ResultCodes.OB_KV_HBASE_TABLE_NOT_EXISTS.errorCode, ((ObTableException) thrown.getCause()).getErrorCode());
+
+                // test use serverName without tableName to get region metrics
+                assertThrows(FeatureNotSupportedException.class,
+                        () -> {
+                            admin.getRegionMetrics(ServerName.valueOf("localhost,1,1"));
+                        });
+
+            // test single-thread getRegionMetrics after writing
+            batchInsert(10000, tablegroup1);
+            // test ServerName is any string
+            long start = System.currentTimeMillis();
+            List<RegionMetrics> metrics = admin.getRegionMetrics(ServerName.valueOf("localhost,1,1"), TableName.valueOf(tablegroup1));
+            long cost = System.currentTimeMillis() - start;
+            System.out.println("get region metrics time usage: " + cost + "ms, tablegroup: " + tablegroup1);
+            assertEquals(10, metrics.size());
+
+            // test getRegionMetrics concurrently reading while writing
+            ExecutorService executorService = Executors.newFixedThreadPool(10);
+            CountDownLatch latch = new CountDownLatch(20);
+            List<Exception> exceptionCatcher = new ArrayList<>();
+            for (int i = 0; i < 20; ++i) {
+                int taskId = i;
+                executorService.submit(() -> {
+                    try {
+                        if (taskId % 2 == 1) {
+                            List<RegionMetrics> regionMetrics = null;
+                            // test get regionMetrics from different namespaces
+                            if (taskId % 3 != 0) {
+                                long thrStart = System.currentTimeMillis();
+                                regionMetrics = admin.getRegionMetrics(null, TableName.valueOf(tablegroup1));
+                                long thrCost = System.currentTimeMillis() - thrStart;
+                                System.out.println("task: " + taskId + ", get region metrics time usage: " + thrCost + "ms, tablegroup: " + tablegroup1);
+                                if (regionMetrics.size() != 10) {
+                                    throw new ObTableGetException(
+                                            "the number of region metrics does not match the number of tablets, the number of region metrics: " + regionMetrics.size());
+                                }
+                            } else {
+                                long thrStart = System.currentTimeMillis();
+                                regionMetrics = admin.getRegionMetrics(null, TableName.valueOf(tablegroup2));
+                                long thrCost = System.currentTimeMillis() - thrStart;
+                                System.out.println("task: " + taskId + ", get region metrics time usage: " + thrCost + "ms, tablegroup: " + tablegroup2);
+                                if (regionMetrics.size() != 3) {
+                                    throw new ObTableGetException(
+                                            "the number of region metrics does not match the number of tablets, the number of region metrics: " + regionMetrics.size());
+                                }
+                            }
+                        } else {
+                            try {
+                                if (taskId % 8 == 0) {
+                                    batchInsert(1000, tablegroup2);
+                                } else {
+                                    batchInsert(1000, tablegroup1);
+                                }
+                            } catch (Exception e) {
+                                Exception originalCause = e;
+                                while (originalCause.getCause() != null && originalCause.getCause() instanceof ObTableException) {
+                                    originalCause = (Exception) originalCause.getCause();
+                                }
+                                if (originalCause instanceof ObTableException && ((ObTableException) originalCause).getErrorCode() == ResultCodes.OB_TIMEOUT.errorCode) {
+                                    // ignore
+                                    System.out.println("taskId: " + taskId + " OB_TIMEOUT");
+                                } else {
+                                    throw e;
+                                }
+                            }
+                            System.out.println("task: " + taskId + ", batchInsert");
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        exceptionCatcher.add(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+            try {
+                System.out.println("waiting for latch");
+                latch.await();
+                System.out.println("waiting for latch finish");
+            } catch (Exception e) {
+                e.printStackTrace();
+                exceptionCatcher.add(e);
+            }
+            executorService.shutdownNow();
+            Assert.assertTrue(exceptionCatcher.isEmpty());
+
+            // test getRegionMetrics from non-partitioned table
+            String non_part_tablegroup = "test_no_part";
+            batchInsert(10000, non_part_tablegroup);
+            start = System.currentTimeMillis();
+            metrics = admin.getRegionMetrics(null, TableName.valueOf(non_part_tablegroup));
+            cost = System.currentTimeMillis() - start;
+            System.out.println("get region metrics time usage: " + cost + "ms, tablegroup: " + non_part_tablegroup);
+            assertEquals(1, metrics.size());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        } finally {
+            executeSQL(conn, "use test; drop table `test_get_region_metrics$cf1`; drop table `test_get_region_metrics$cf2`; drop table `test_get_region_metrics$cf3`;", true);
+            executeSQL(conn, "use `get_region`; drop table `get_region:test_multi_cf$cf1`; drop table `get_region:test_multi_cf$cf2`; drop table `get_region:test_multi_cf$cf3`;", true);
+            executeSQL(conn, "use test; drop table `test_no_part$cf1`; drop table `test_no_part$cf2`; drop table `test_no_part$cf3`;", true);
+            conn.close();
+        }
+    }
+
+>>>>>>> 32534b6 (add test case for disable-before-delete-table; fix cases)
     private void deleteTableIfExists(Admin admin, TableName tableName) throws Exception {
         if (admin.tableExists(tableName)) {
             if (admin.isTableEnabled(tableName)) {
@@ -532,11 +737,20 @@ public class OHTableAdminInterfaceTest {
             assertTrue(admin.tableExists(TableName.valueOf("test_del_tb")));
             IOException thrown = assertThrows(IOException.class,
                     () -> {
+                        if (admin.isTableEnabled(TableName.valueOf("tablegroup_not_exists"))) {
+                            admin.disableTable(TableName.valueOf("tablegroup_not_exists"));
+                        }
                         admin.deleteTable(TableName.valueOf("tablegroup_not_exists"));
                     });
             Assert.assertTrue(thrown.getCause() instanceof ObTableException);
             Assert.assertEquals(ResultCodes.OB_KV_HBASE_TABLE_NOT_EXISTS.errorCode, ((ObTableException) thrown.getCause()).getErrorCode());
+            if (admin.isTableEnabled(TableName.valueOf("del_tb", "test"))) {
+                admin.disableTable(TableName.valueOf("del_tb", "test"));
+            }
             admin.deleteTable(TableName.valueOf("del_tb", "test"));
+            if (admin.isTableEnabled(TableName.valueOf("test_del_tb"))) {
+                admin.disableTable(TableName.valueOf("test_del_tb"));
+            }
             admin.deleteTable(TableName.valueOf("test_del_tb"));
             assertFalse(admin.tableExists(TableName.valueOf("del_tb", "test")));
             assertFalse(admin.tableExists(TableName.valueOf("test_del_tb")));
@@ -1263,6 +1477,9 @@ public class OHTableAdminInterfaceTest {
             if (admin.tableExists(TableName.valueOf(tableName))) {
                 setErrSimPoint(ErrSimPoint.EN_DELETE_HTABLE_CF_FINISH_ERR, false);
                 setErrSimPoint(ErrSimPoint.EN_DELETE_HTABLE_SKIP_CF_ERR, false);
+                if (admin.isTableEnabled(TableName.valueOf(tableName))) {
+                    admin.disableTable(TableName.valueOf(tableName));
+                }
                 admin.deleteTable(TableName.valueOf(tableName));
             }
         }
@@ -1326,6 +1543,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableExistsException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1345,6 +1565,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableNotDisabledException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1376,6 +1599,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableExistsException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1395,6 +1621,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableNotDisabledException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1407,6 +1636,9 @@ public class OHTableAdminInterfaceTest {
         } catch (Exception e) {
             Assert.assertEquals(e.getClass(), TableNotEnabledException.class);
         } finally {
+            if (admin.isTableEnabled(TableName.valueOf("t1"))) {
+                admin.disableTable(TableName.valueOf("t1"));
+            }
             admin.deleteTable(TableName.valueOf("t1"));
         }
 
@@ -1449,6 +1681,9 @@ public class OHTableAdminInterfaceTest {
 
             // 1. open err EN_DELETE_HTABLE_SKIP_CF_ERR, will skip delete cf table when delete hbase table
             // and the subsequent delete htable operations will return OB_TABLEGROUP_NOT_EMPTY
+            if (admin.isTableEnabled(TableName.valueOf(tableName))) {
+                admin.disableTable(TableName.valueOf(tableName));
+            }
             setErrSimPoint(ErrSimPoint.EN_DELETE_HTABLE_SKIP_CF_ERR, true);
             ObHTableTestUtil.executeIgnoreExpectedErrors(() -> admin.deleteTable(TableName.valueOf(tableName)), "OB_TABLEGROUP_NOT_EMPTY");
             assertTrue("Table should still exist after delete error injection",
@@ -1474,6 +1709,9 @@ public class OHTableAdminInterfaceTest {
             executeSQL(conn, "drop database if exists db_test_create_drop_tg_helper", true);
             executeSQL(sysConn, String.format("alter tenant %s set default tablegroup = null", tenantName), true);
             if (admin.tableExists(TableName.valueOf(tableName))) {
+                if (admin.isTableEnabled(TableName.valueOf(tableName))) {
+                    admin.disableTable(TableName.valueOf(tableName));
+                }
                 setErrSimPoint(ErrSimPoint.EN_DELETE_HTABLE_SKIP_CF_ERR, false);
                 admin.deleteTable(TableName.valueOf(tableName));
             }
@@ -1565,5 +1803,28 @@ public class OHTableAdminInterfaceTest {
                 admin.deleteTable(TableName.valueOf(tableName));
             }
         }
+    }
+    
+    @Test
+    public void testDropEnabledTableFail() throws Exception {
+        Configuration conf = ObHTableTestUtil.newConfiguration();
+        Connection connection = ConnectionFactory.createConnection(conf);
+        Admin admin = connection.getAdmin();
+        
+        byte[] tableName = Bytes.toBytes("test_drop_enabled_table_fail");
+        byte[] cf1 = Bytes.toBytes("cf1");
+        HColumnDescriptor hcd1 = new HColumnDescriptor(cf1);
+        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+        htd.addFamily(hcd1);
+        try {
+            admin.createTable(htd);
+            admin.deleteTable(TableName.valueOf(tableName));
+            fail();
+        } catch (Exception e) {
+            assertTrue(true);
+        }
+        admin.disableTable(TableName.valueOf(tableName));
+        admin.deleteTable(TableName.valueOf(tableName));
+        Assert.assertFalse(admin.tableExists(TableName.valueOf(tableName)));
     }
 }
